@@ -1,0 +1,115 @@
+package com.erwin.backend.entities;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "usuario")
+public class Usuario {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_usuario")
+    private Integer idUsuario;
+
+    @Column(nullable = false, length = 20)
+    private String cedula;
+
+    @Column(name = "correo_institucional", length = 100)
+    private String correoInstitucional;
+
+    @Column(nullable = false, length = 20)
+    private String rol; // ADMIN / DOCENTE / ESTUDIANTE  (NOT NULL EN TU BD)
+
+    @Column(nullable = false, length = 50)
+    private String username;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
+
+    private String nombres;
+    private String apellidos;
+
+    @Column(name = "rol_asignado")
+    private String rolAsignado;
+
+    @Column(nullable = false)
+    private Boolean activo = true;
+
+    // ===== GETTERS =====
+    public Integer getIdUsuario() {
+        return idUsuario;
+    }
+
+    public String getCedula() {
+        return cedula;
+    }
+
+    public String getCorreoInstitucional() {
+        return correoInstitucional;
+    }
+
+    public String getRol() {
+        return rol;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public String getNombres() {
+        return nombres;
+    }
+
+    public String getApellidos() {
+        return apellidos;
+    }
+
+    public String getRolAsignado() {
+        return rolAsignado;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    // ===== SETTERS =====
+    public void setCedula(String cedula) {
+        this.cedula = cedula;
+    }
+
+    public void setCorreoInstitucional(String correoInstitucional) {
+        this.correoInstitucional = correoInstitucional;
+    }
+
+    public void setRol(String rol) {
+        this.rol = rol;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public void setNombres(String nombres) {
+        this.nombres = nombres;
+    }
+
+    public void setApellidos(String apellidos) {
+        this.apellidos = apellidos;
+    }
+
+    public void setRolAsignado(String rolAsignado) {
+        this.rolAsignado = rolAsignado;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+}

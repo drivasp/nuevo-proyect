@@ -1,0 +1,110 @@
+<div class="page">
+
+  <!-- CONTENEDOR CENTRADO (como la referencia) -->
+  <div class="wrap">
+
+    <!-- HEADER / BANNER VERDE (como "Documento de Titulación") -->
+    <div class="hero">
+      <div class="hero-left">
+        <h1>Control de Usuarios</h1>
+        <p>Administración de usuarios del sistema (roles, estado y datos generales)</p>
+      </div>
+
+      <div class="hero-right">
+        <a class="back-link" href="javascript:void(0)" (click)="volver()">Volver</a>
+      </div>
+    </div>
+
+    <!-- CARD PRINCIPAL -->
+    <div class="card">
+
+      <!-- TITULO SECCIÓN -->
+      <div class="section-title">
+        <h2>Usuarios del sistema</h2>
+        <p>Gestión: crear, editar, asignar roles y activar/desactivar cuentas</p>
+      </div>
+
+      <!-- BARRA DE ACCIONES (botones + buscador) -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button class="btn btn-success" type="button">
+            <span class="icon">＋</span>
+            Nuevo usuario
+          </button>
+
+          <button class="btn btn-secondary" type="button">
+            <span class="icon">↻</span>
+            Recargar
+          </button>
+        </div>
+
+        <div class="toolbar-right">
+          <div class="search">
+            <span class="search-icon">🔎</span>
+            <input type="text" placeholder="Buscar (usuario, nombre, rol, estado...)" />
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLA -->
+      <div class="table-card">
+        <table class="table">
+          <thead>
+          <tr>
+            <th style="width: 80px;">ID</th>
+            <th>Usuario</th>
+            <th>Nombres</th>
+            <th>Apellidos</th>
+            <th style="width: 160px;">Rol</th>
+            <th style="width: 160px;">Estado</th>
+            <th style="width: 230px;">Acciones</th>
+          </tr>
+          </thead>
+
+          <tbody>
+          <!-- DEMO (luego lo conectamos al backend) -->
+          <tr>
+            <td>1</td>
+            <td class="mono">admin</td>
+            <td>Administrador</td>
+            <td>Sistema</td>
+            <td><span class="badge badge-info">ADMIN</span></td>
+            <td><span class="badge badge-success">ACTIVO</span></td>
+            <td class="actions">
+              <button class="btn btn-outline" type="button">✏️ Editar</button>
+              <button class="btn btn-warning" type="button">Desactivar</button>
+            </td>
+          </tr>
+
+          <tr>
+            <td>2</td>
+            <td class="mono">docente1</td>
+            <td>Erwin</td>
+            <td>Docente</td>
+            <td><span class="badge badge-info">DOCENTE</span></td>
+            <td><span class="badge badge-success">ACTIVO</span></td>
+            <td class="actions">
+              <button class="btn btn-outline" type="button">✏️ Editar</button>
+              <button class="btn btn-warning" type="button">Desactivar</button>
+            </td>
+          </tr>
+
+          <tr>
+            <td>3</td>
+            <td class="mono">estudiante1</td>
+            <td>Juan</td>
+            <td>Pérez</td>
+            <td><span class="badge badge-info">ESTUDIANTE</span></td>
+            <td><span class="badge badge-pending">INACTIVO</span></td>
+            <td class="actions">
+              <button class="btn btn-outline" type="button">✏️ Editar</button>
+              <button class="btn btn-primary" type="button">Activar</button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>

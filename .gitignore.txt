@@ -1,0 +1,16 @@
+# Angular
+/node_modules
+/dist
+/.angular
+
+# Java / Spring Boot
+/target
+/.mvn
+.classpath
+.project
+.settings
+
+# Varios
+.DS_Store
+.vscode
+.idea
