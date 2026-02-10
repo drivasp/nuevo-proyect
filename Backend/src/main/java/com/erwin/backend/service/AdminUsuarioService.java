@@ -1,6 +1,8 @@
 package com.erwin.backend.service;
 
 import com.erwin.backend.dtos.*;
+import com.erwin.backend.entities.Usuario;
+import com.erwin.backend.repository.UsuarioRepository;
 import com.erwin.backend.repository.UsuarioSpRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,47 +12,59 @@ import java.util.List;
 @Service
 public class AdminUsuarioService {
 
-    private final UsuarioSpRepository usuarioSp;
+    private final UsuarioRepository usuarioRepo;
+    private final UsuarioSpRepository usuarioSpRepo;
 
-    public AdminUsuarioService(UsuarioSpRepository usuarioSp) {
-        this.usuarioSp = usuarioSp;
+    public AdminUsuarioService(UsuarioRepository usuarioRepo, UsuarioSpRepository usuarioSpRepo) {
+        this.usuarioRepo = usuarioRepo;
+        this.usuarioSpRepo = usuarioSpRepo;
     }
 
     public List<UsuarioAdminDto> listar() {
-        return usuarioSp.listar();
+        return usuarioSpRepo.listarUsuarios();
     }
 
     @Transactional
     public UsuarioAdminDto crear(UsuarioCreateRequest req) {
         validarCreate(req);
 
-        // normaliza rol antes de mandar al SP
-        req.setRol(normalizarRol(req.getRol()));
-        if (req.getActivo() == null) req.setActivo(true);
+        String username = req.getUsername().trim();
+        String rol = normalizarRol(req.getRol());
 
-        Integer newId = usuarioSp.crear(req);
+        if (usuarioRepo.existsByUsername(username)) {
+            throw new RuntimeException("El usuario ya existe");
+        }
 
-        // luego de crear, volvemos a listar y buscamos el creado (simple)
-        // (si quieres, luego hacemos un sp_get_usuario_por_id)
-        return usuarioSp.listar().stream()
-                .filter(u -> u.getIdUsuario().equals(newId))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Usuario creado pero no se pudo recuperar"));
+        Integer newId = usuarioSpRepo.crearUsuario(
+                req.getCedula().trim(),
+                req.getCorreoInstitucional() != null ? req.getCorreoInstitucional().trim() : null,
+                username,
+                req.getPassword(),
+                req.getNombres().trim(),
+                req.getApellidos().trim(),
+                rol,
+                req.getActivo() != null ? req.getActivo() : true
+        );
+
+        Usuario u = usuarioRepo.findById(newId)
+                .orElseThrow(() -> new RuntimeException("Usuario no existe"));
+        return toDto(u);
     }
 
     @Transactional
     public UsuarioAdminDto editar(Integer id, UsuarioUpdateRequest req) {
+        String nombres = req.getNombres() != null ? req.getNombres().trim() : null;
+        String apellidos = req.getApellidos() != null ? req.getApellidos().trim() : null;
+        String rol = req.getRol() != null && !req.getRol().trim().isEmpty()
+                ? normalizarRol(req.getRol())
+                : null;
+        String password = req.getPassword() != null ? req.getPassword().trim() : null;
 
-        if (req.getRol() != null && !req.getRol().trim().isEmpty()) {
-            req.setRol(normalizarRol(req.getRol()));
-        }
+        usuarioSpRepo.editarUsuario(id, nombres, apellidos, rol, req.getActivo(), password);
 
-        usuarioSp.editar(id, req);
-
-        return usuarioSp.listar().stream()
-                .filter(u -> u.getIdUsuario().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Usuario editado pero no se pudo recuperar"));
+        Usuario u = usuarioRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no existe"));
+        return toDto(u);
     }
 
     @Transactional
@@ -59,12 +73,22 @@ public class AdminUsuarioService {
             throw new RuntimeException("Debe enviar activo=true/false");
         }
 
-        usuarioSp.cambiarEstado(id, req);
+        usuarioSpRepo.cambiarEstado(id, req.getActivo());
 
-        return usuarioSp.listar().stream()
-                .filter(u -> u.getIdUsuario().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Estado cambiado pero no se pudo recuperar"));
+        Usuario u = usuarioRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no existe"));
+        return toDto(u);
+    }
+
+    private UsuarioAdminDto toDto(Usuario u) {
+        return new UsuarioAdminDto(
+                u.getIdUsuario(),
+                u.getUsername(),
+                u.getNombres(),
+                u.getApellidos(),
+                u.getRol(),
+                u.getActivo()
+        );
     }
 
     private void validarCreate(UsuarioCreateRequest req) {
@@ -93,4 +117,5 @@ public class AdminUsuarioService {
         }
         return r;
     }
+
 }

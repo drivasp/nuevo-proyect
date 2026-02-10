@@ -1,15 +1,9 @@
-import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import {
-  AdminUsuariosService,
-  Rol,
-  UsuarioDTO,
-  UsuarioCreateRequest,
-  UsuarioUpdateRequest
-} from '../../services/admin-usuarios.service';
-import { finalize, take } from 'rxjs/operators';
+
+import { AdminUsuariosService } from '../../services/admin-usuarios.service';
+import { RolesService, RolDto, PermisoDto } from '../../services/roles.service';
 
 @Component({
   selector: 'app-admin-usuarios',
@@ -20,195 +14,196 @@ import { finalize, take } from 'rxjs/operators';
 })
 export class AdminUsuariosComponent implements OnInit {
 
-  usuarios: UsuarioDTO[] = [];
+  // ================= USUARIOS =================
+  usuarios: any[] = [];
+  usuariosFiltrados: any[] = [];
+  rolesUsuario: string[] = [];
+
+  filtro = '';
   cargando = false;
   errorMsg = '';
-  filtro = '';
 
-  // modal
   modalAbierto = false;
   modoEdicion = false;
 
-  // formulario
-  formCreate: UsuarioCreateRequest = this.nuevoFormCreate();
-  formUpdate: UsuarioUpdateRequest = this.nuevoFormUpdate();
-  editId: number | null = null;
+  formCreate = {
+    cedula: '',
+    correoInstitucional: '',
+    username: '',
+    password: '',
+    nombres: '',
+    apellidos: '',
+    rol: '',
+    activo: true
+  };
 
-  roles: Rol[] = ['ADMIN', 'DOCENTE', 'ESTUDIANTE'];
+  formUpdate = {
+    nombres: '',
+    apellidos: '',
+    rol: '',
+    activo: true,
+    password: ''
+  };
+
+  // ================= ROLES =================
+  rolesSistema: RolDto[] = [];
+  permisos: PermisoDto[] = [];
+
+  cargandoRoles = false;
+  cargandoPermisos = false;
+  rolModoEdicion = false;
+
+  rolForm = {
+    idRol: null as number | null,
+    nombreRol: '',
+    activo: true,
+    permisos: [] as number[]
+  };
 
   constructor(
-    private router: Router,
-    private api: AdminUsuariosService,
-    private cdr: ChangeDetectorRef,
-    private zone: NgZone
+    private usuariosService: AdminUsuariosService,
+    private rolesService: RolesService
   ) {}
 
   ngOnInit(): void {
-    // ✅ Carga automática al entrar
-    this.recargar();
+    this.cargarUsuarios();
+    this.cargarRoles();
+    this.cargarPermisos();
   }
 
-  volver() {
-    this.router.navigate(['/login']);
+  // ========== USUARIOS ==========
+  cargarUsuarios() {
+    this.cargando = true;
+    this.usuariosService.listar().subscribe({
+      next: (data) => {
+        this.usuarios = data;
+        this.usuariosFiltrados = data;
+        this.rolesUsuario = [...new Set(data.map(u => u.rol))];
+        this.cargando = false;
+      },
+      error: () => {
+        this.errorMsg = 'Error al cargar usuarios';
+        this.cargando = false;
+      }
+    });
   }
 
-  // ====== UI ======
-  get usuariosFiltrados(): UsuarioDTO[] {
-    const t = this.filtro.trim().toLowerCase();
-    if (!t) return this.usuarios;
-
-    return this.usuarios.filter(u =>
-      String(u.idUsuario).includes(t) ||
-      u.username.toLowerCase().includes(t) ||
-      u.nombres.toLowerCase().includes(t) ||
-      u.apellidos.toLowerCase().includes(t) ||
-      u.rol.toLowerCase().includes(t) ||
-      (u.activo ? 'activo' : 'inactivo').includes(t)
-    );
+  recargar() {
+    this.cargarUsuarios();
   }
 
-  badgeEstado(u: UsuarioDTO) {
+  badgeEstado(u: any) {
     return u.activo ? 'ACTIVO' : 'INACTIVO';
   }
 
-  // ====== Backend ======
-  recargar() {
-    this.cargando = true;
-    this.errorMsg = '';
+  abrirNuevo() {
+    this.modoEdicion = false;
+    this.modalAbierto = true;
+  }
 
-    this.api.listar()
-      .pipe(
-        take(1),
-        finalize(() => {
-          this.cargando = false;
+  abrirEditar(u: any) {
+    this.modoEdicion = true;
+    this.formUpdate = { ...u };
+    this.modalAbierto = true;
+  }
 
-          // ✅ fuerza refresco visual (soluciona “no aparece hasta darle click”)
-          this.zone.run(() => {
-            this.cdr.detectChanges();
-          });
-        })
-      )
+  toggleActivo(u: any): void {
+    this.usuariosService
+      .cambiarEstado(u.idUsuario, !u.activo)
       .subscribe({
-        next: (data) => {
-          this.usuarios = data ?? [];
-
-          // ✅ refresco inmediato
-          this.zone.run(() => {
-            this.cdr.detectChanges();
-          });
+        next: () => {
+          u.activo = !u.activo;
         },
         error: (err) => {
-          this.errorMsg = err?.error?.message || 'No se pudo cargar usuarios';
-
-          this.zone.run(() => {
-            this.cdr.detectChanges();
-          });
+          console.error('Error al cambiar estado', err);
         }
       });
   }
 
-  // ====== Modal ======
-  abrirNuevo() {
-    this.modoEdicion = false;
-    this.modalAbierto = true;
-    this.editId = null;
-    this.formCreate = this.nuevoFormCreate();
-  }
 
-  abrirEditar(u: UsuarioDTO) {
-    this.modoEdicion = true;
-    this.modalAbierto = true;
-    this.editId = u.idUsuario;
-
-    this.formUpdate = {
-      nombres: u.nombres,
-      apellidos: u.apellidos,
-      rol: u.rol,
-      activo: u.activo,
-      password: ''
-    };
+  guardar() {
+    this.modalAbierto = false;
   }
 
   cerrarModal() {
     this.modalAbierto = false;
   }
 
-  guardar() {
-    if (!this.modoEdicion) {
-      // CREAR
-      if (!this.formCreate.cedula?.trim()) return alert('Cédula requerida');
-      if (!this.formCreate.correoInstitucional?.trim()) return alert('Correo institucional requerido');
-      if (!this.formCreate.username?.trim()) return alert('Username requerido');
-      if (!this.formCreate.password?.trim()) return alert('Password requerido');
-      if (!this.formCreate.nombres?.trim()) return alert('Nombres requeridos');
-      if (!this.formCreate.apellidos?.trim()) return alert('Apellidos requeridos');
+  volver() {
+    history.back();
+  }
 
-      const payload: UsuarioCreateRequest = {
-        ...this.formCreate,
-        rol: (this.formCreate.rol || 'ESTUDIANTE').toUpperCase() as Rol,
-        activo: this.formCreate.activo ?? true
-      };
-
-      this.api.crear(payload).pipe(take(1)).subscribe({
-        next: () => {
-          this.modalAbierto = false;
-          this.recargar();
-        },
-        error: (err) => alert(err?.error?.message || 'No se pudo crear usuario')
-      });
-
-      return;
-    }
-
-    // EDITAR
-    if (!this.editId) return;
-
-    const payload: UsuarioUpdateRequest = {
-      ...this.formUpdate,
-      rol: (this.formUpdate.rol || 'ESTUDIANTE').toUpperCase() as Rol
-    };
-
-    if (payload.password?.trim() === '') delete payload.password;
-
-    this.api.editar(this.editId, payload).pipe(take(1)).subscribe({
-      next: () => {
-        this.modalAbierto = false;
-        this.recargar();
-      },
-      error: (err) => alert(err?.error?.message || 'No se pudo editar usuario')
+  // ========== ROLES ==========
+  cargarRoles() {
+    this.cargandoRoles = true;
+    this.rolesService.listarRoles().subscribe(data => {
+      this.rolesSistema = data;
+      this.cargandoRoles = false;
     });
   }
 
-  toggleActivo(u: UsuarioDTO) {
-    const ok = confirm(`¿Seguro que desea ${u.activo ? 'desactivar' : 'activar'} al usuario "${u.username}"?`);
-    if (!ok) return;
-
-    this.api.cambiarEstado(u.idUsuario, !u.activo).pipe(take(1)).subscribe({
-      next: () => this.recargar(),
-      error: (err) => alert(err?.error?.message || 'No se pudo cambiar estado')
+  cargarPermisos() {
+    this.cargandoPermisos = true;
+    this.rolesService.listarPermisos().subscribe(data => {
+      this.permisos = data;
+      this.cargandoPermisos = false;
     });
   }
 
-  private nuevoFormCreate(): UsuarioCreateRequest {
-    return {
-      cedula: '',
-      correoInstitucional: '',
-      username: '',
-      password: '',
-      nombres: '',
-      apellidos: '',
-      rol: 'ESTUDIANTE',
-      activo: true
-    };
-  }
-
-  private nuevoFormUpdate(): UsuarioUpdateRequest {
-    return {
-      nombres: '',
-      apellidos: '',
-      rol: 'ESTUDIANTE',
+  abrirNuevoRol() {
+    this.rolModoEdicion = false;
+    this.rolForm = {
+      idRol: null,
+      nombreRol: '',
       activo: true,
-      password: ''
+      permisos: []
     };
+  }
+
+  editarRol(rol: RolDto) {
+    this.rolModoEdicion = true;
+    this.rolForm = {
+      idRol: rol.idRol,
+      nombreRol: rol.nombreRol,
+      activo: rol.activo,
+      permisos: []
+    };
+  }
+
+  permisoSeleccionado(id: number): boolean {
+    return this.rolForm.permisos.includes(id);
+  }
+
+  togglePermiso(id: number, checked: boolean) {
+    if (checked) {
+      this.rolForm.permisos.push(id);
+    } else {
+      this.rolForm.permisos =
+        this.rolForm.permisos.filter(p => p !== id);
+    }
+  }
+
+  guardarRol() {
+    if (this.rolModoEdicion && this.rolForm.idRol) {
+      this.rolesService.editarRol(this.rolForm.idRol, {
+        nombreRol: this.rolForm.nombreRol,
+        activo: this.rolForm.activo
+      }).subscribe(() => this.cargarRoles());
+    } else {
+      this.rolesService.crearRol({
+        nombreRol: this.rolForm.nombreRol,
+        activo: this.rolForm.activo,
+        permisos: this.rolForm.permisos
+      }).subscribe(() => this.cargarRoles());
+    }
+    this.abrirNuevoRol();
+  }
+
+  cambiarEstadoRol(rol: RolDto) {
+    this.rolesService.cambiarEstado(rol.idRol, {
+      activo: !rol.activo
+    }).subscribe(() => {
+      rol.activo = !rol.activo;
+    });
   }
 }

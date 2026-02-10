@@ -1,73 +1,82 @@
 package com.erwin.backend.repository;
 
 import com.erwin.backend.dtos.UsuarioAdminDto;
-import com.erwin.backend.dtos.UsuarioCreateRequest;
-import com.erwin.backend.dtos.UsuarioEstadoRequest;
-import com.erwin.backend.dtos.UsuarioUpdateRequest;
-import org.springframework.jdbc.core.JdbcTemplate;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Repository
 public class UsuarioSpRepository {
 
-    private final JdbcTemplate jdbc;
+    @PersistenceContext
+    private EntityManager entityManager;
 
-    public UsuarioSpRepository(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
+    public List<UsuarioAdminDto> listarUsuarios() {
+        List<Object[]> rows = entityManager.createNativeQuery(
+                        "SELECT id_usuario, username, nombres, apellidos, rol, activo FROM sp_listar_usuarios()")
+                .getResultList();
+
+        List<UsuarioAdminDto> result = new ArrayList<>();
+        for (Object[] row : rows) {
+            result.add(new UsuarioAdminDto(
+                    ((Number) row[0]).intValue(),
+                    (String) row[1],
+                    (String) row[2],
+                    (String) row[3],
+                    (String) row[4],
+                    (Boolean) row[5]
+            ));
+        }
+        return result;
     }
 
-    // ✅ LISTAR (sp_listar_usuarios)
-    public List<UsuarioAdminDto> listar() {
-        return jdbc.query(
-                "SELECT * FROM sp_listar_usuarios()",
-                (rs, rowNum) -> new UsuarioAdminDto(
-                        rs.getInt("id_usuario"),
-                        rs.getString("username"),
-                        rs.getString("nombres"),
-                        rs.getString("apellidos"),
-                        rs.getString("rol"),
-                        rs.getBoolean("activo")
-                )
-        );
+    public Integer crearUsuario(String cedula,
+                                String correo,
+                                String username,
+                                String password,
+                                String nombres,
+                                String apellidos,
+                                String rol,
+                                Boolean activo) {
+        Object result = entityManager.createNativeQuery(
+                        "SELECT sp_crear_usuario(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")
+                .setParameter(1, cedula)
+                .setParameter(2, correo)
+                .setParameter(3, username)
+                .setParameter(4, password)
+                .setParameter(5, nombres)
+                .setParameter(6, apellidos)
+                .setParameter(7, rol)
+                .setParameter(8, activo)
+                .getSingleResult();
+        return ((Number) result).intValue();
     }
 
-    // ✅ CREAR (sp_crear_usuario)
-    public Integer crear(UsuarioCreateRequest req) {
-        return jdbc.queryForObject(
-                "SELECT sp_crear_usuario(?,?,?,?,?,?,?,?)",
-                Integer.class,
-                req.getCedula(),
-                req.getCorreoInstitucional(),
-                req.getUsername(),
-                req.getPassword(),
-                req.getNombres(),
-                req.getApellidos(),
-                req.getRol(),
-                req.getActivo() != null ? req.getActivo() : true
-        );
+    public void editarUsuario(Integer id,
+                              String nombres,
+                              String apellidos,
+                              String rol,
+                              Boolean activo,
+                              String password) {
+        entityManager.createNativeQuery(
+                        "SELECT sp_editar_usuario(?1, ?2, ?3, ?4, ?5, ?6)")
+                .setParameter(1, id)
+                .setParameter(2, nombres)
+                .setParameter(3, apellidos)
+                .setParameter(4, rol)
+                .setParameter(5, activo)
+                .setParameter(6, password)
+                .getSingleResult();
     }
 
-    // ✅ EDITAR (sp_editar_usuario)
-    public void editar(Integer id, UsuarioUpdateRequest req) {
-        jdbc.update(
-                "SELECT sp_editar_usuario(?,?,?,?,?,?)",
-                id,
-                req.getNombres(),
-                req.getApellidos(),
-                req.getRol(),
-                req.getActivo(),
-                req.getPassword()
-        );
-    }
-
-    // ✅ CAMBIAR ESTADO (sp_cambiar_estado_usuario)
-    public void cambiarEstado(Integer id, UsuarioEstadoRequest req) {
-        jdbc.update(
-                "SELECT sp_cambiar_estado_usuario(?,?)",
-                id,
-                req.getActivo()
-        );
+    public void cambiarEstado(Integer id, Boolean activo) {
+        entityManager.createNativeQuery(
+                        "SELECT sp_cambiar_estado_usuario(?1, ?2)")
+                .setParameter(1, id)
+                .setParameter(2, activo)
+                .getSingleResult();
     }
 }
